@@ -3,32 +3,43 @@ from sqlalchemy import text
 
 CITIES = ["Recife", "Paulista", "Maceió"]
 
+
 def get_conn():
     return st.connection("beneficios_db", type="sql")
+
 
 def execute(sql: str, params=None):
     if params is None:
         params = {}
+    if not isinstance(params, dict):
+        raise ValueError("Use parâmetros em dicionário no formato {'campo': valor}.")
     conn = get_conn()
     with conn.session as session:
         session.execute(text(sql), params)
         session.commit()
 
+
 def fetch_one(sql: str, params=None):
     if params is None:
         params = {}
+    if not isinstance(params, dict):
+        raise ValueError("Use parâmetros em dicionário no formato {'campo': valor}.")
     conn = get_conn()
     df = conn.query(sql, params=params, ttl=0)
     if df.empty:
         return None
     return df.iloc[0].to_dict()
 
+
 def fetch_all(sql: str, params=None):
     if params is None:
         params = {}
+    if not isinstance(params, dict):
+        raise ValueError("Use parâmetros em dicionário no formato {'campo': valor}.")
     conn = get_conn()
     df = conn.query(sql, params=params, ttl=0)
     return df.to_dict(orient="records")
+
 
 def init_db():
     execute("""
