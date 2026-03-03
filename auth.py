@@ -23,14 +23,26 @@ def verify_password(password: str, password_hash: str) -> bool:
 def create_user(username: str, password: str):
     password_hash = hash_password(password)
     execute(
-        "INSERT INTO users (username, password_hash) VALUES (?, ?);",
-        (username.strip().lower(), password_hash)
+        """
+        INSERT INTO users (username, password_hash)
+        VALUES (:username, :password_hash);
+        """,
+        {
+            "username": username.strip().lower(),
+            "password_hash": password_hash
+        }
     )
 
 def authenticate(username: str, password: str) -> bool:
     row = fetch_one(
-        "SELECT password_hash FROM users WHERE username = ?;",
-        (username.strip().lower(),)
+        """
+        SELECT password_hash
+        FROM users
+        WHERE username = :username;
+        """,
+        {
+            "username": username.strip().lower()
+        }
     )
     if not row:
         return False
@@ -38,4 +50,4 @@ def authenticate(username: str, password: str) -> bool:
 
 def user_exists() -> bool:
     row = fetch_one("SELECT COUNT(*) AS c FROM users;")
-    return row and row["c"] > 0
+    return bool(row and row["c"] > 0)

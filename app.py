@@ -614,7 +614,10 @@ def page_config():
                 flash("Feriado adicionado ✅", "success")
                 st.rerun()
 
-        rows = fetch_all("SELECT date, name FROM holidays_city_date WHERE city = ? ORDER BY date;", (city,))
+        rows = fetch_all(
+    "SELECT date, name FROM holidays_city_date WHERE city = :city ORDER BY date;",
+    {"city": city}
+)
         if rows:
             st.dataframe([{"Data": r["date"], "Nome": r["name"] or ""} for r in rows],
                          use_container_width=True, hide_index=True)
