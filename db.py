@@ -60,14 +60,20 @@ def init_db():
         va_vr_al NUMERIC DEFAULT 0,
         vt_fixo_supervisor_pe NUMERIC DEFAULT 0,
         vt_fixo_supervisor_al NUMERIC DEFAULT 0,
+        va_fixo_supervisor_pe NUMERIC DEFAULT 0,
+        va_fixo_supervisor_al NUMERIC DEFAULT 0,
         homeoffice_pe NUMERIC DEFAULT 0,
-        homeoffice_pe_b NUMERIC DEFAULT 0,
         homeoffice_al NUMERIC DEFAULT 0,
-        homeoffice_al_b NUMERIC DEFAULT 0,
         updated_at TIMESTAMP
     );
     """)
     execute("INSERT INTO config (id) VALUES (1) ON CONFLICT (id) DO NOTHING;")
+
+    # Garante colunas novas em bases já existentes
+    execute("ALTER TABLE config ADD COLUMN IF NOT EXISTS va_fixo_supervisor_pe NUMERIC DEFAULT 0;")
+    execute("ALTER TABLE config ADD COLUMN IF NOT EXISTS va_fixo_supervisor_al NUMERIC DEFAULT 0;")
+    execute("ALTER TABLE config ADD COLUMN IF NOT EXISTS homeoffice_pe NUMERIC DEFAULT 0;")
+    execute("ALTER TABLE config ADD COLUMN IF NOT EXISTS homeoffice_al NUMERIC DEFAULT 0;")
 
     execute("""
     CREATE TABLE IF NOT EXISTS employees (
@@ -88,10 +94,15 @@ def init_db():
         benefit_va_vr INTEGER DEFAULT 0,
         benefit_homeoffice INTEGER DEFAULT 0,
         is_supervisor INTEGER DEFAULT 0,
-        homeoffice_type TEXT DEFAULT 'A',
+        manual_vt_value NUMERIC DEFAULT 0,
+        manual_va_value NUMERIC DEFAULT 0,
         updated_at TIMESTAMP
     );
     """)
+
+    # Garante colunas novas em bases já existentes
+    execute("ALTER TABLE employees ADD COLUMN IF NOT EXISTS manual_vt_value NUMERIC DEFAULT 0;")
+    execute("ALTER TABLE employees ADD COLUMN IF NOT EXISTS manual_va_value NUMERIC DEFAULT 0;")
 
     execute("""
     CREATE TABLE IF NOT EXISTS holidays_city_date (

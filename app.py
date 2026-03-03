@@ -375,15 +375,16 @@ def page_config():
             vt_pe = st.number_input("Valor VT PE", value=float(config.get("vt_pe", 0)), step=0.5)
             va_vr_pe = st.number_input("Valor VA/VR PE", value=float(config.get("va_vr_pe", 0)), step=0.5)
             vt_sup_pe = st.number_input("VT fixo supervisor PE", value=float(config.get("vt_fixo_supervisor_pe", 0)), step=0.5)
-            ho_pe_a = st.number_input("Homeoffice PE - A", value=float(config.get("homeoffice_pe", 0)), step=0.5)
-            ho_pe_b = st.number_input("Homeoffice PE - B", value=float(config.get("homeoffice_pe_b", 0)), step=0.5)
+            va_sup_pe = st.number_input("VA/VR fixo supervisor PE", value=float(config.get("va_fixo_supervisor_pe", 0)), step=0.5)
+            ho_pe = st.number_input("Homeoffice PE", value=float(config.get("homeoffice_pe", 0)), step=0.5)
+
         with c2:
             st.markdown("**Alagoas (AL)**")
             vt_al = st.number_input("Valor VT AL", value=float(config.get("vt_al", 0)), step=0.5)
             va_vr_al = st.number_input("Valor VA/VR AL", value=float(config.get("va_vr_al", 0)), step=0.5)
             vt_sup_al = st.number_input("VT fixo supervisor AL", value=float(config.get("vt_fixo_supervisor_al", 0)), step=0.5)
-            ho_al_a = st.number_input("Homeoffice AL - A", value=float(config.get("homeoffice_al", 0)), step=0.5)
-            ho_al_b = st.number_input("Homeoffice AL - B", value=float(config.get("homeoffice_al_b", 0)), step=0.5)
+            va_sup_al = st.number_input("VA/VR fixo supervisor AL", value=float(config.get("va_fixo_supervisor_al", 0)), step=0.5)
+            ho_al = st.number_input("Homeoffice AL", value=float(config.get("homeoffice_al", 0)), step=0.5)
 
         if st.button("💾 Salvar configurações", type="primary"):
             execute("""
@@ -394,10 +395,10 @@ def page_config():
                     va_vr_al = :va_vr_al,
                     vt_fixo_supervisor_pe = :vt_sup_pe,
                     vt_fixo_supervisor_al = :vt_sup_al,
-                    homeoffice_pe = :ho_pe_a,
-                    homeoffice_pe_b = :ho_pe_b,
-                    homeoffice_al = :ho_al_a,
-                    homeoffice_al_b = :ho_al_b,
+                    va_fixo_supervisor_pe = :va_sup_pe,
+                    va_fixo_supervisor_al = :va_sup_al,
+                    homeoffice_pe = :ho_pe,
+                    homeoffice_al = :ho_al,
                     updated_at = NOW()
                 WHERE id = 1;
             """, {
@@ -407,10 +408,10 @@ def page_config():
                 "va_vr_al": va_vr_al,
                 "vt_sup_pe": vt_sup_pe,
                 "vt_sup_al": vt_sup_al,
-                "ho_pe_a": ho_pe_a,
-                "ho_pe_b": ho_pe_b,
-                "ho_al_a": ho_al_a,
-                "ho_al_b": ho_al_b,
+                "va_sup_pe": va_sup_pe,
+                "va_sup_al": va_sup_al,
+                "ho_pe": ho_pe,
+                "ho_al": ho_al,
             })
             flash("Configurações salvas com sucesso ✅", "success")
             st.rerun()
@@ -488,18 +489,21 @@ def page_employees():
         days_selected = st.multiselect("", list(WEEKDAY_MAP.keys()), default=[])
 
         st.markdown("**Benefícios**")
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3 = st.columns(3)
         with c1:
             benefit_vt = st.checkbox("VT")
         with c2:
             benefit_va_vr = st.checkbox("VA/VR")
         with c3:
-            is_supervisor = st.checkbox("Supervisor(a)")
-        with c4:
-            homeoffice_choice = st.selectbox("Homeoffice", ["Sem", "A", "B"])
+            benefit_homeoffice = st.checkbox("Homeoffice")
 
-        benefit_homeoffice = 1 if homeoffice_choice != "Sem" else 0
-        homeoffice_type = homeoffice_choice if homeoffice_choice in ["A", "B"] else "A"
+        is_supervisor = st.checkbox("Supervisor(a)")
+
+        c4, c5 = st.columns(2)
+        with c4:
+            manual_vt_value = st.number_input("VT manual fixo (R$)", min_value=0.0, value=0.0, step=0.5)
+        with c5:
+            manual_va_value = st.number_input("VA/VR manual fixo (R$)", min_value=0.0, value=0.0, step=0.5)
 
         if st.button("💾 Salvar funcionário", type="primary"):
             if not name.strip() or not cpf.strip():
@@ -516,12 +520,12 @@ def page_employees():
                         name, cpf, uf, city, vt_per_day, work_schedule,
                         pres_mon, pres_tue, pres_wed, pres_thu, pres_fri, pres_sat,
                         benefit_vt, benefit_va_vr, benefit_homeoffice, is_supervisor,
-                        homeoffice_type, updated_at
+                        manual_vt_value, manual_va_value, updated_at
                     ) VALUES (
                         :name, :cpf, :uf, :city, :vt_per_day, :work_schedule,
                         :pres_mon, :pres_tue, :pres_wed, :pres_thu, :pres_fri, :pres_sat,
                         :benefit_vt, :benefit_va_vr, :benefit_homeoffice, :is_supervisor,
-                        :homeoffice_type, NOW()
+                        :manual_vt_value, :manual_va_value, NOW()
                     );
                 """, {
                     "name": name.strip(),
@@ -538,9 +542,10 @@ def page_employees():
                     "pres_sat": pres_flags["pres_sat"],
                     "benefit_vt": 1 if benefit_vt else 0,
                     "benefit_va_vr": 1 if benefit_va_vr else 0,
-                    "benefit_homeoffice": benefit_homeoffice,
+                    "benefit_homeoffice": 1 if benefit_homeoffice else 0,
                     "is_supervisor": 1 if is_supervisor else 0,
-                    "homeoffice_type": homeoffice_type
+                    "manual_vt_value": float(manual_vt_value),
+                    "manual_va_value": float(manual_va_value),
                 })
                 flash("Funcionário salvo ✅", "success")
                 st.rerun()
@@ -570,8 +575,10 @@ def page_employees():
                 "Presencial": pres_days_str(r),
                 "VT": "Sim" if r["benefit_vt"] else "Não",
                 "VA/VR": "Sim" if r["benefit_va_vr"] else "Não",
-                "Homeoffice": "Sem" if not r["benefit_homeoffice"] else (r["homeoffice_type"] or "A").upper(),
+                "Homeoffice": "Sim" if r["benefit_homeoffice"] else "Não",
                 "Supervisor": "Sim" if r["is_supervisor"] else "Não",
+                "VT Manual": round(float(r.get("manual_vt_value", 0) or 0), 2),
+                "VA/VR Manual": round(float(r.get("manual_va_value", 0) or 0), 2),
                 "ID": r["id"]
             } for r in rows]
 
@@ -588,41 +595,57 @@ def page_employees():
             with st.form("edit_employee"):
                 new_name = st.text_input("Nome", value=emp_dict.get("name", ""))
                 new_cpf = st.text_input("CPF", value=emp_dict.get("cpf", ""))
-                new_uf = st.selectbox("UF", ["PE", "AL"],
-                                      index=0 if emp_dict.get("uf") == "PE" else 1,
-                                      format_func=uf_label)
+                new_uf = st.selectbox(
+                    "UF",
+                    ["PE", "AL"],
+                    index=0 if emp_dict.get("uf") == "PE" else 1,
+                    format_func=uf_label
+                )
                 new_city_options = cities_by_uf(new_uf)
                 new_city_index = new_city_options.index(emp_dict.get("city")) if emp_dict.get("city") in new_city_options else 0
                 new_city = st.selectbox("Cidade", new_city_options, index=new_city_index)
                 new_vt_day = st.number_input("VT por dia", value=int(emp_dict.get("vt_per_day", 0)))
-                new_schedule = st.selectbox("Expediente", ["SEG-SEX", "SEG-SAB"],
-                                            index=0 if emp_dict.get("work_schedule", "SEG-SEX") == "SEG-SEX" else 1)
+                new_schedule = st.selectbox(
+                    "Expediente",
+                    ["SEG-SEX", "SEG-SAB"],
+                    index=0 if emp_dict.get("work_schedule", "SEG-SEX") == "SEG-SEX" else 1
+                )
 
                 st.markdown("**Dias presenciais**")
                 current_days = [k for k, (c, _) in WEEKDAY_MAP.items() if emp_dict.get(c, 0) == 1]
                 new_days = st.multiselect("", list(WEEKDAY_MAP.keys()), default=current_days)
 
                 st.markdown("**Benefícios**")
-                c1, c2, c3, c4 = st.columns(4)
+                c1, c2, c3 = st.columns(3)
                 with c1:
                     new_vt = st.checkbox("VT", value=bool(emp_dict.get("benefit_vt", 0)))
                 with c2:
                     new_va = st.checkbox("VA/VR", value=bool(emp_dict.get("benefit_va_vr", 0)))
                 with c3:
-                    new_sup = st.checkbox("Supervisor(a)", value=bool(emp_dict.get("is_supervisor", 0)))
+                    new_ho = st.checkbox("Homeoffice", value=bool(emp_dict.get("benefit_homeoffice", 0)))
+
+                new_sup = st.checkbox("Supervisor(a)", value=bool(emp_dict.get("is_supervisor", 0)))
+
+                c4, c5 = st.columns(2)
                 with c4:
-                    idx_ho = ["Sem", "A", "B"].index(
-                        "Sem" if not emp_dict.get("benefit_homeoffice") else (emp_dict.get("homeoffice_type", "A").upper())
+                    new_manual_vt = st.number_input(
+                        "VT manual fixo (R$)",
+                        min_value=0.0,
+                        value=float(emp_dict.get("manual_vt_value", 0) or 0),
+                        step=0.5
                     )
-                    new_ho = st.selectbox("Homeoffice", ["Sem", "A", "B"], index=idx_ho)
+                with c5:
+                    new_manual_va = st.number_input(
+                        "VA/VR manual fixo (R$)",
+                        min_value=0.0,
+                        value=float(emp_dict.get("manual_va_value", 0) or 0),
+                        step=0.5
+                    )
 
                 if st.form_submit_button("💾 Salvar alterações", type="primary"):
                     pres = {c: 0 for c, _ in WEEKDAY_MAP.values()}
                     for d in new_days:
                         pres[WEEKDAY_MAP[d][0]] = 1
-
-                    new_ho_val = 1 if new_ho != "Sem" else 0
-                    new_ho_type = new_ho if new_ho in ["A", "B"] else "A"
 
                     execute("""
                         UPDATE employees SET
@@ -642,7 +665,8 @@ def page_employees():
                             benefit_va_vr = :benefit_va_vr,
                             benefit_homeoffice = :benefit_homeoffice,
                             is_supervisor = :is_supervisor,
-                            homeoffice_type = :homeoffice_type,
+                            manual_vt_value = :manual_vt_value,
+                            manual_va_value = :manual_va_value,
                             updated_at = NOW()
                         WHERE id = :id;
                     """, {
@@ -660,9 +684,10 @@ def page_employees():
                         "pres_sat": pres["pres_sat"],
                         "benefit_vt": 1 if new_vt else 0,
                         "benefit_va_vr": 1 if new_va else 0,
-                        "benefit_homeoffice": new_ho_val,
+                        "benefit_homeoffice": 1 if new_ho else 0,
                         "is_supervisor": 1 if new_sup else 0,
-                        "homeoffice_type": new_ho_type,
+                        "manual_vt_value": float(new_manual_vt),
+                        "manual_va_value": float(new_manual_va),
                         "id": emp_id
                     })
                     flash("Alterações salvas ✅", "success")
@@ -717,12 +742,11 @@ def page_quadro_mensal():
 
         vt_unit = float(config.get("vt_pe" if uf == "PE" else "vt_al", 0))
         va_unit = float(config.get("va_vr_pe" if uf == "PE" else "va_vr_al", 0))
-        vt_sup = float(config.get("vt_fixo_supervisor_pe" if uf == "PE" else "vt_fixo_supervisor_al", 0))
 
-        ho_type = (e_dict["homeoffice_type"] or "A").upper()
-        ho_key = "homeoffice_pe" if uf == "PE" else "homeoffice_al"
-        ho_key_b = ho_key + "_b"
-        ho_unit = float(config.get(ho_key if ho_type == "A" else ho_key_b, 0))
+        vt_sup = float(config.get("vt_fixo_supervisor_pe" if uf == "PE" else "vt_fixo_supervisor_al", 0))
+        va_sup = float(config.get("va_fixo_supervisor_pe" if uf == "PE" else "va_fixo_supervisor_al", 0))
+
+        ho_unit = float(config.get("homeoffice_pe" if uf == "PE" else "homeoffice_al", 0))
 
         vt_d, va_d = get_benefit_deltas(e_dict["id"], year, month)
 
@@ -735,8 +759,29 @@ def page_quadro_mensal():
         vt_final = max(vt_qty + vt_d, 0)
         va_final = max(va_days + va_d, 0)
 
-        vt_val = vt_sup if e_dict["is_supervisor"] and e_dict["benefit_vt"] else (vt_unit * vt_final)
-        va_val = va_unit * va_final
+        manual_vt = float(e_dict.get("manual_vt_value", 0) or 0)
+        manual_va = float(e_dict.get("manual_va_value", 0) or 0)
+
+        if e_dict["benefit_vt"]:
+            if manual_vt > 0:
+                vt_val = manual_vt
+            elif e_dict["is_supervisor"]:
+                vt_val = vt_sup
+            else:
+                vt_val = vt_unit * vt_final
+        else:
+            vt_val = 0
+
+        if e_dict["benefit_va_vr"]:
+            if manual_va > 0:
+                va_val = manual_va
+            elif e_dict["is_supervisor"]:
+                va_val = va_sup
+            else:
+                va_val = va_unit * va_final
+        else:
+            va_val = 0
+
         ho_val = ho_unit if e_dict["benefit_homeoffice"] else 0
 
         total = vt_val + va_val + ho_val
